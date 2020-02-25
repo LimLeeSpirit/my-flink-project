@@ -32,7 +32,7 @@ public class SocketWindowWordCount {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
 		// 通过连接 socket 获取输入数据，这里连接到本地9000端口，如果9000端口已被占用，请换一个端口
-		DataStream<String> text = env.socketTextStream("localhost", 9000, "\n");
+		DataStream<String> text = env.socketTextStream("localhost", 9020, "\n");
 
 		// 解析数据，按 word 分组，开窗，聚合
 		DataStream<Tuple2<String, Integer>> windowCounts = text
@@ -45,7 +45,8 @@ public class SocketWindowWordCount {
 					}
 				})
 				.keyBy(0)
-				.timeWindow(Time.seconds(5))
+				.timeWindow(Time.seconds(6))
+				// 为每个key 每个window指定聚合函数，按照次数字段相加
 				.sum(1);
 
 		// 将结果打印到控制台，注意这里使用的是单线程打印，而非多线程

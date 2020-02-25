@@ -44,6 +44,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * TopN 计算最热门商品
+ * 每隔5分钟 输出 最近一小时内 点击量 最多的前 N 个商品
+ */
 public class HotItems {
 
 	public static void main(String[] args) throws Exception {
@@ -85,10 +89,15 @@ public class HotItems {
 					return userBehavior.behavior.equals("pv");
 				}
 			})
+			// 对商品分组
 			.keyBy("itemId")
+			// 对每个商品做滑动窗口（1小时窗口，5分钟滑动一次）
 			.timeWindow(Time.minutes(60), Time.minutes(5))
+			// aggregate（多对一）做增量的聚合操作，它能使用AggregateFunction提前聚合掉数据，减少 state 的存储压力
 			.aggregate(new CountAgg(), new WindowResultFunction())
+			// 为了统计每个窗口下最热门的商品，我们需要再次按窗口进行分组
 			.keyBy("windowEnd")
+			// 在 每个窗口 计算点击量排名前3名的商品
 			.process(new TopNHotItems(3))
 			.print();
 
@@ -166,7 +175,11 @@ public class HotItems {
 		}
 	}
 
-	/** 用于输出窗口的结果 */
+	/**
+	 * 用于输出窗口的结果
+	 * 将每个 key 每个窗口聚合后的结果带上其他信息进行输出。
+	 * 我们这里实现的WindowResultFunction将主键商品ID，窗口，点击量封装成了ItemViewCount进行输出。
+	 * */
 	public static class WindowResultFunction implements WindowFunction<Long, ItemViewCount, Tuple, TimeWindow> {
 
 		@Override
